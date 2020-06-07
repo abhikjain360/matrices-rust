@@ -26,7 +26,10 @@ impl<T: Display + Copy> Clone for Matrix<T> {
     }
 }
 
-impl<T: Display + Copy + Add<Output = T> + Add> Add<Matrix<T>> for Matrix<T> {
+impl<T> Add<Matrix<T>> for Matrix<T>
+where
+    T: Display + Copy + Add<Output = T> + Mul,
+{
     type Output = Matrix<T>;
 
     fn add(self, other: Matrix<T>) -> Matrix<T> {
@@ -68,11 +71,6 @@ pub fn normal_multiplication<T: Display + Copy + Add<Output = T> + Mul<Output = 
     if a.cols != b.rows {
         panic!("dimensions for multiplication don't match");
     }
-
-    println!("Testers:");
-    a.print();
-    println!("Testers:");
-    b.print();
 
     let mut vals: Vec<Vec<T>> = Vec::with_capacity(a.rows);
 
