@@ -28,7 +28,7 @@ impl<T: Display + Copy> Clone for Matrix<T> {
 
 impl<T> Add<Matrix<T>> for Matrix<T>
 where
-    T: Display + Copy + Add<Output = T> + Mul,
+    T: Display + Copy + Add<Output = T> + Mul<Output = T>,
 {
     type Output = Matrix<T>;
 
