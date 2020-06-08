@@ -3,7 +3,7 @@
 use std::fmt::Display;
 
 /* for binary ops of Matrix */
-use std::ops::{Add, Index, Mul, Sub};
+use std::ops::{Add, Index, IndexMut, Mul, Sub};
 
 // Struct for matrices
 pub struct Matrix<T> {
@@ -38,11 +38,17 @@ where
 }
 
 /* Indexing the matrices */
-impl<T> Index<(usize, usize)> for Matrix<T> {
-    type Output = T;
+impl<T> Index<usize> for Matrix<T> {
+    type Output = Vec<T>;
 
-    fn index(&self, index: (usize, usize)) -> &T {
-        &self.vals[index.0][index.1]
+    fn index(&self, index: usize) -> &Vec<T> {
+        &self.vals[index]
+    }
+}
+
+impl<T> IndexMut<usize> for Matrix<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Vec<T> {
+        &mut self.vals[index]
     }
 }
 
@@ -63,7 +69,7 @@ where
         for i in 0..self.rows {
             vals.push(Vec::with_capacity(self.cols));
             for j in 0..self.cols {
-                vals[i].push(self.vals[i][j] + other.vals[i][j]);
+                vals[i].push(self[i][j] + other[i][j]);
             }
         }
 
@@ -91,7 +97,7 @@ where
         for i in 0..self.rows {
             vals.push(Vec::with_capacity(self.cols));
             for j in 0..self.cols {
-                vals[i].push(self.vals[i][j] - other.vals[i][j]);
+                vals[i].push(self[i][j] - other[i][j]);
             }
         }
 
@@ -144,7 +150,7 @@ where
         let vec: Vec<T> = vec![T::from(0); n - self.cols];
 
         for i in 0..self.rows {
-            self.vals[i].extend(vec.iter().cloned());
+            self[i].extend(vec.iter().cloned());
         }
 
         let vec: Vec<T> = vec![T::from(0); n];
@@ -168,9 +174,9 @@ where
     for i in 0..a.rows {
         vals.push(Vec::with_capacity(b.cols));
         for j in 0..a.cols {
-            vals[i].push(a.vals[i][0] * b.vals[0][j]);
+            vals[i].push(a[i][0] * b[0][j]);
             for k in 1..b.cols {
-                vals[i][j] = vals[i][j] + (a.vals[i][k] * b.vals[k][j]);
+                vals[i][j] = vals[i][j] + (a[i][k] * b[k][j]);
             }
         }
     }
