@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Sub};
 
 pub struct Matrix<T: Display> {
     pub rows: usize,
@@ -52,6 +52,42 @@ where
     }
 }
 
+impl<T> Sub<Matrix<T>> for Matrix<T>
+where
+    T: Display + Copy + Sub<Output = T> + Mul<Output = T>,
+{
+    type Output = Matrix<T>;
+    fn sub(self, other: Matrix<T>) -> Matrix<T> {
+        if self.cols != other.cols || self.rows != other.rows {
+            panic!("add: matrix dimensions not equal");
+        }
+        let mut vals: Vec<Vec<T>> = Vec::with_capacity(self.rows);
+        for i in 0..self.rows {
+            vals.push(Vec::with_capacity(self.cols));
+            for j in 0..self.cols {
+                vals[i].push(self.vals[i][j] - other.vals[i][j]);
+            }
+        }
+
+        Matrix::<T> {
+            rows: self.rows,
+            cols: self.cols,
+            vals,
+        }
+    }
+}
+
+impl<T> Mul<Matrix<T>> for Matrix<T>
+where
+    T: Display + Copy + Add<Output = T> + Mul<Output = T>,
+{
+    type Output = Matrix<T>;
+
+    fn mul(self, other: Matrix<T>) -> Matrix<T> {
+        multiplication_normal(&self, &other)
+    }
+}
+
 impl<T: Display + Copy> Matrix<T> {
     pub fn print(&self) {
         for i in &self.vals {
@@ -64,7 +100,7 @@ impl<T: Display + Copy> Matrix<T> {
     }
 }
 
-pub fn normal_multiplication<T: Display + Copy + Add<Output = T> + Mul<Output = T>>(
+fn multiplication_normal<T: Display + Copy + Add<Output = T> + Mul<Output = T>>(
     a: &Matrix<T>,
     b: &Matrix<T>,
 ) -> Matrix<T> {
