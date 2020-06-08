@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 /* for display traits of T */
 use std::fmt::Display;
 
@@ -112,12 +113,12 @@ where
 /* multiplication of matrices */
 impl<T> Mul<Matrix<T>> for Matrix<T>
 where
-    T: Copy + Add<Output = T> + Mul<Output = T>,
+    T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<u32>,
 {
     type Output = Matrix<T>;
 
-    fn mul(self, other: Matrix<T>) -> Matrix<T> {
-        multiplication_normal(&self, &other)
+    fn mul(mut self, mut other: Matrix<T>) -> Matrix<T> {
+        strassen_wrapper(&mut self, &mut other)
     }
 }
 
@@ -140,7 +141,7 @@ where
 /* method needed for strassen */
 impl<T> Matrix<T>
 where
-    T: Clone + From<u32>,
+    T: Clone + From<u32> + Copy,
 {
     pub fn fill_zeroes(&mut self, n: usize) {
         if n < self.cols || n < self.rows {
@@ -159,9 +160,37 @@ where
             self.vals.push(vec.clone());
         }
     }
+
+    pub fn quad(&self, n: usize) -> Matrix<T> {
+        if self.cols % 2 == 1 || self.rows % 2 == 1 {
+            panic!("dimensions mismatch for quadrant division");
+        }
+        let (rows, cols) = (self.rows / 2, self.cols / 2);
+        Matrix::<T> {
+            rows,
+            cols,
+            vals: match n {
+                2 => self.get_vec_part(0, rows, cols, self.cols),
+                3 => self.get_vec_part(rows, self.rows, 0, cols),
+                4 => self.get_vec_part(rows, self.rows, cols, self.cols),
+                1 | _ => self.get_vec_part(0, rows, 0, cols),
+            },
+        }
+    }
+
+    pub fn get_vec_part(&self, r1: usize, r2: usize, c1: usize, c2: usize) -> Vec<Vec<T>> {
+        let mut vec: Vec<Vec<T>> = Vec::with_capacity(r2);
+        for i in 0..(r2 - r1) {
+            vec.push(Vec::with_capacity(c2));
+            for j in 0..(c2 - c1) {
+                vec[i].push(self.vals[i + r1][j + c1]);
+            }
+        }
+        vec
+    }
 }
 
-fn multiplication_normal<T>(a: &Matrix<T>, b: &Matrix<T>) -> Matrix<T>
+pub fn multiplication_normal<T>(a: &Matrix<T>, b: &Matrix<T>) -> Matrix<T>
 where
     T: Copy + Add<Output = T> + Mul<Output = T>,
 {
@@ -202,9 +231,9 @@ fn find_greatest_dim<T>(a: &Matrix<T>, b: &Matrix<T>) -> usize {
     n
 }
 
-pub fn multiplication_strassen<T>(a: &mut Matrix<T>, b: &mut Matrix<T>) -> Matrix<T>
+pub fn strassen_wrapper<T>(a: &mut Matrix<T>, b: &mut Matrix<T>) -> Matrix<T>
 where
-    T: Copy + Add<Output = T> + Mul<Output = T> + From<u32>,
+    T: Copy + Add<Output = T> + Mul<Output = T> + From<u32> + Sub<Output = T>,
 {
     if a.cols != b.rows {
         panic!("dimensions for multiplication don't match");
@@ -220,28 +249,66 @@ where
     a.fill_zeroes(fill_n);
     b.fill_zeroes(fill_n);
 
-    let mut vals: Vec<Vec<T>> = Vec::with_capacity(fill_n);
-
-    Matrix::<T> {
-        rows: a.rows,
-        cols: b.cols,
-        vals,
-    }
+    strassen(&a, &b, fill_n)
 }
-//
-//pub fn strassen_recursive<T>(a_vals: Vec<Vec<T>>, b_vals: Vec<Vec<T>>, n: usize) -> Vec<Vec<T>>
-//where
-//    T: Copy + Add<Output = T> + Mul<Output = T> + From<u32> + Sub<Output = T>,
-//{
-//    if n == 1 {
-//        vec![vec![a_vals[0][0] * b_vals[0][0]]]
-//    }
-//
-//    let half: usize = n / 2 - 1;
-//    let full: usize = n - 1;
-//
-//    let p1: Vec<Vec<T>> =
-//        a_vals[0..half][0..half] * (b_vals[0..half][half..full] - b_vals[half..full][half..full]);
-//    let p2: Vec<Vec<T>> =
-//        (b_vals[0..half][half..full] - b_vals[half..full][half..full]) * b_vals[0..half][0..half];
-//}
+
+pub fn strassen<T>(a: &Matrix<T>, b: &Matrix<T>, n: usize) -> Matrix<T>
+where
+    T: Copy + Sub<Output = T> + Add<Output = T> + Mul<Output = T> + From<u32>,
+{
+    let c: Matrix<T>;
+    if n == 1 {
+        c = Matrix::<T> {
+            rows: 1,
+            cols: 1,
+            vals: vec![vec![a[0][0] * b[0][0]]],
+        };
+    } else {
+        let p1: Matrix<T> = a.quad(1) * (b.quad(2) - b.quad(4));
+        let p2: Matrix<T> = (a.quad(1) + a.quad(2)) * b.quad(4);
+        let p3: Matrix<T> = (a.quad(3) + a.quad(4)) * b.quad(1);
+        let p4: Matrix<T> = a.quad(4) * (b.quad(3) - b.quad(1));
+        let p5: Matrix<T> = (a.quad(1) + a.quad(4)) * (b.quad(1) + b.quad(4));
+        let p6: Matrix<T> = (a.quad(2) - a.quad(4)) * (b.quad(3) + b.quad(4));
+        let p7: Matrix<T> = (a.quad(1) - a.quad(3)) * (b.quad(1) + b.quad(2));
+
+        c = combine_quad(
+            &(p5.clone() + p4.clone() - p2.clone() + p6),
+            &(p1.clone() + p2),
+            &(p3.clone() + p4),
+            &(p1 + p5 - p3 - p7),
+        );
+    }
+    c
+}
+
+pub fn combine_quad<T>(a: &Matrix<T>, b: &Matrix<T>, c: &Matrix<T>, d: &Matrix<T>) -> Matrix<T>
+where
+    T: Clone + Copy,
+{
+    if a.rows != b.rows || a.cols != c.cols || b.cols != d.cols || c.rows != d.rows {
+        panic!("incompatible quad dimensions for combining");
+    }
+
+    let mut vals: Vec<Vec<T>> = Vec::with_capacity(a.rows + c.rows);
+    let (rows, cols) = (a.rows + c.rows, a.cols + b.cols);
+
+    for i in 0..a.rows {
+        vals.push(combine_vecs(a[i][..].to_vec(), b[i][..].to_vec()));
+    }
+    for i in 0..c.rows {
+        vals.push(combine_vecs(c[i][..].to_vec(), d[i][..].to_vec()));
+    }
+
+    Matrix::<T> { rows, cols, vals }
+}
+pub fn combine_vecs<T>(a: Vec<T>, b: Vec<T>) -> Vec<T>
+where
+    T: Copy,
+{
+    let mut vec = a;
+    for i in 0..b.len() {
+        vec.push(b[i]);
+    }
+    vec
+}
