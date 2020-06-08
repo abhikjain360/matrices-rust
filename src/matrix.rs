@@ -100,6 +100,26 @@ impl<T: Display + Copy> Matrix<T> {
     }
 }
 
+impl<T: Display + Clone + From<u32>> Matrix<T> {
+    pub fn fill_zeroes(&mut self, n: usize) {
+        if n < self.cols || n < self.rows {
+            panic!("can not add zeroes, sizes smaller than self");
+        }
+
+        let temp_vec: Vec<T> = vec![T::from(0); n - self.cols];
+
+        for i in 0..self.rows {
+            self.vals[i].extend(temp_vec.iter().cloned());
+        }
+
+        let temp_vec: Vec<T> = vec![T::from(0); n];
+
+        for i in self.rows..n {
+            self.vals.push(temp_vec.clone());
+        }
+    }
+}
+
 fn multiplication_normal<T: Display + Copy + Add<Output = T> + Mul<Output = T>>(
     a: &Matrix<T>,
     b: &Matrix<T>,
