@@ -1,13 +1,18 @@
+/* for display traits of T */
 use std::fmt::Display;
+
+/* for binary ops of Matrix */
 use std::ops::{Add, Mul, Sub};
 
-pub struct Matrix<T: Display> {
+// Struct for matrices
+pub struct Matrix<T> {
     pub rows: usize,
     pub cols: usize,
     pub vals: Vec<Vec<T>>,
 }
 
-impl<T: Display + Copy> Clone for Matrix<T> {
+/* clone implementation needed as vector can't copy */
+impl<T: Copy> Clone for Matrix<T> {
     fn clone(&self) -> Matrix<T> {
         let mut vals: Vec<Vec<T>> = Vec::with_capacity(self.rows);
         let mut index: usize = 0;
@@ -26,9 +31,10 @@ impl<T: Display + Copy> Clone for Matrix<T> {
     }
 }
 
+/* addition of matrices */
 impl<T> Add<Matrix<T>> for Matrix<T>
 where
-    T: Display + Copy + Add<Output = T> + Mul<Output = T>,
+    T: Copy + Add<Output = T> + Mul<Output = T>,
 {
     type Output = Matrix<T>;
 
@@ -52,9 +58,10 @@ where
     }
 }
 
+/* subtraction of matrices */
 impl<T> Sub<Matrix<T>> for Matrix<T>
 where
-    T: Display + Copy + Sub<Output = T> + Mul<Output = T>,
+    T: Copy + Sub<Output = T> + Mul<Output = T>,
 {
     type Output = Matrix<T>;
     fn sub(self, other: Matrix<T>) -> Matrix<T> {
@@ -77,9 +84,10 @@ where
     }
 }
 
+/* multiplication of matrices */
 impl<T> Mul<Matrix<T>> for Matrix<T>
 where
-    T: Display + Copy + Add<Output = T> + Mul<Output = T>,
+    T: Copy + Add<Output = T> + Mul<Output = T>,
 {
     type Output = Matrix<T>;
 
@@ -88,6 +96,7 @@ where
     }
 }
 
+/* Easy printing values */
 impl<T: Display + Copy> Matrix<T> {
     pub fn print(&self) {
         for i in &self.vals {
@@ -100,27 +109,28 @@ impl<T: Display + Copy> Matrix<T> {
     }
 }
 
-impl<T: Display + Clone + From<u32>> Matrix<T> {
+/* method needed for strassen */
+impl<T: Clone + From<u32>> Matrix<T> {
     pub fn fill_zeroes(&mut self, n: usize) {
         if n < self.cols || n < self.rows {
             panic!("can not add zeroes, sizes smaller than self");
         }
 
-        let temp_vec: Vec<T> = vec![T::from(0); n - self.cols];
+        let vec: Vec<T> = vec![T::from(0); n - self.cols];
 
         for i in 0..self.rows {
-            self.vals[i].extend(temp_vec.iter().cloned());
+            self.vals[i].extend(vec.iter().cloned());
         }
 
-        let temp_vec: Vec<T> = vec![T::from(0); n];
+        let vec: Vec<T> = vec![T::from(0); n];
 
-        for i in self.rows..n {
-            self.vals.push(temp_vec.clone());
+        for _ in self.rows..n {
+            self.vals.push(vec.clone());
         }
     }
 }
 
-fn multiplication_normal<T: Display + Copy + Add<Output = T> + Mul<Output = T>>(
+fn multiplication_normal<T: Copy + Add<Output = T> + Mul<Output = T>>(
     a: &Matrix<T>,
     b: &Matrix<T>,
 ) -> Matrix<T> {
