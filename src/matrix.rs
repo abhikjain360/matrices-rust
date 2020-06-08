@@ -1,8 +1,9 @@
+#![allow(dead_code)]
 /* for display traits of T */
 use std::fmt::Display;
 
 /* for binary ops of Matrix */
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Index, Mul, Sub};
 
 // Struct for matrices
 pub struct Matrix<T> {
@@ -12,10 +13,14 @@ pub struct Matrix<T> {
 }
 
 /* clone implementation needed as vector can't copy */
-impl<T: Copy> Clone for Matrix<T> {
+impl<T> Clone for Matrix<T>
+where
+    T: Copy,
+{
     fn clone(&self) -> Matrix<T> {
         let mut vals: Vec<Vec<T>> = Vec::with_capacity(self.rows);
         let mut index: usize = 0;
+
         for i in &self.vals {
             vals.push(Vec::with_capacity(self.cols));
             for j in i {
@@ -23,11 +28,21 @@ impl<T: Copy> Clone for Matrix<T> {
             }
             index += 1;
         }
+
         Matrix::<T> {
             rows: self.rows,
             cols: self.cols,
             vals,
         }
+    }
+}
+
+/* Indexing the matrices */
+impl<T> Index<(usize, usize)> for Matrix<T> {
+    type Output = T;
+
+    fn index(&self, index: (usize, usize)) -> &T {
+        &self.vals[index.0][index.1]
     }
 }
 
@@ -42,7 +57,9 @@ where
         if self.cols != other.cols || self.rows != other.rows {
             panic!("add: matrix dimensions not equal");
         }
+
         let mut vals: Vec<Vec<T>> = Vec::with_capacity(self.rows);
+
         for i in 0..self.rows {
             vals.push(Vec::with_capacity(self.cols));
             for j in 0..self.cols {
@@ -64,11 +81,13 @@ where
     T: Copy + Sub<Output = T> + Mul<Output = T>,
 {
     type Output = Matrix<T>;
+
     fn sub(self, other: Matrix<T>) -> Matrix<T> {
         if self.cols != other.cols || self.rows != other.rows {
             panic!("add: matrix dimensions not equal");
         }
         let mut vals: Vec<Vec<T>> = Vec::with_capacity(self.rows);
+
         for i in 0..self.rows {
             vals.push(Vec::with_capacity(self.cols));
             for j in 0..self.cols {
@@ -97,7 +116,10 @@ where
 }
 
 /* Easy printing values */
-impl<T: Display + Copy> Matrix<T> {
+impl<T> Matrix<T>
+where
+    T: Display + Copy,
+{
     pub fn print(&self) {
         for i in &self.vals {
             for j in i {
@@ -110,7 +132,10 @@ impl<T: Display + Copy> Matrix<T> {
 }
 
 /* method needed for strassen */
-impl<T: Clone + From<u32>> Matrix<T> {
+impl<T> Matrix<T>
+where
+    T: Clone + From<u32>,
+{
     pub fn fill_zeroes(&mut self, n: usize) {
         if n < self.cols || n < self.rows {
             panic!("can not add zeroes, sizes smaller than self");
@@ -130,10 +155,10 @@ impl<T: Clone + From<u32>> Matrix<T> {
     }
 }
 
-fn multiplication_normal<T: Copy + Add<Output = T> + Mul<Output = T>>(
-    a: &Matrix<T>,
-    b: &Matrix<T>,
-) -> Matrix<T> {
+fn multiplication_normal<T>(a: &Matrix<T>, b: &Matrix<T>) -> Matrix<T>
+where
+    T: Copy + Add<Output = T> + Mul<Output = T>,
+{
     if a.cols != b.rows {
         panic!("dimensions for multiplication don't match");
     }
@@ -156,3 +181,61 @@ fn multiplication_normal<T: Copy + Add<Output = T> + Mul<Output = T>>(
         vals,
     }
 }
+
+fn find_greatest_dim<T>(a: &Matrix<T>, b: &Matrix<T>) -> usize {
+    let mut n: usize = a.rows;
+    if n < a.cols {
+        n = a.cols;
+    }
+    if n < b.cols {
+        n = b.cols;
+    }
+    if n < b.rows {
+        n = b.rows;
+    }
+    n
+}
+
+pub fn multiplication_strassen<T>(a: &mut Matrix<T>, b: &mut Matrix<T>) -> Matrix<T>
+where
+    T: Copy + Add<Output = T> + Mul<Output = T> + From<u32>,
+{
+    if a.cols != b.rows {
+        panic!("dimensions for multiplication don't match");
+    }
+
+    let max_n = find_greatest_dim(&a, &b);
+    let mut fill_n: usize = 1;
+
+    while fill_n < max_n {
+        fill_n <<= 1;
+    }
+
+    a.fill_zeroes(fill_n);
+    b.fill_zeroes(fill_n);
+
+    let mut vals: Vec<Vec<T>> = Vec::with_capacity(fill_n);
+
+    Matrix::<T> {
+        rows: a.rows,
+        cols: b.cols,
+        vals,
+    }
+}
+//
+//pub fn strassen_recursive<T>(a_vals: Vec<Vec<T>>, b_vals: Vec<Vec<T>>, n: usize) -> Vec<Vec<T>>
+//where
+//    T: Copy + Add<Output = T> + Mul<Output = T> + From<u32> + Sub<Output = T>,
+//{
+//    if n == 1 {
+//        vec![vec![a_vals[0][0] * b_vals[0][0]]]
+//    }
+//
+//    let half: usize = n / 2 - 1;
+//    let full: usize = n - 1;
+//
+//    let p1: Vec<Vec<T>> =
+//        a_vals[0..half][0..half] * (b_vals[0..half][half..full] - b_vals[half..full][half..full]);
+//    let p2: Vec<Vec<T>> =
+//        (b_vals[0..half][half..full] - b_vals[half..full][half..full]) * b_vals[0..half][0..half];
+//}
