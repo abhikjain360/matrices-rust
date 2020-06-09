@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 
 /* for display traits of T */
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 /* for binary ops of Matrix */
 use std::ops::{Add, Index, IndexMut, Mul, Sub};
 
 // Struct for matrices
+#[derive(Debug)]
 pub struct Matrix<T> {
     pub rows: usize,
     pub cols: usize,
@@ -113,7 +114,7 @@ where
 /* multiplication of matrices */
 impl<T> Mul<Matrix<T>> for Matrix<T>
 where
-    T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<u32>,
+    T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<u8> + Eq,
 {
     type Output = Matrix<T>;
 
@@ -128,6 +129,7 @@ where
     T: Display + Copy,
 {
     pub fn print(&self) {
+        print!("rows: {} cols: {}\n", self.rows, self.cols);
         for i in &self.vals {
             for j in i {
                 print!("{} ", j);
@@ -141,7 +143,7 @@ where
 /* method needed for strassen */
 impl<T> Matrix<T>
 where
-    T: Clone + From<u32> + Copy,
+    T: Clone + From<u8> + Copy + Eq,
 {
     pub fn fill_zeroes(&mut self, n: usize) {
         if n < self.cols || n < self.rows {
@@ -159,6 +161,9 @@ where
         for _ in self.rows..n {
             self.vals.push(vec.clone());
         }
+
+        self.rows = n;
+        self.cols = n;
     }
 
     pub fn quad(&self, n: usize) -> Matrix<T> {
@@ -188,6 +193,27 @@ where
         }
         vec
     }
+
+    pub fn trim(&mut self, rows: usize, cols: usize) {
+        self.rows = rows;
+        self.cols = cols;
+        self.vals = self.get_vec_part(0, rows, 0, cols);
+    }
+
+    pub fn isequal(&self, other: &Matrix<T>) -> bool {
+        let mut x: bool = true;
+        if self.rows != other.rows || self.cols != other.cols {
+            x = false
+        }
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                if self[i][j] != other[i][j] {
+                    x = false
+                }
+            }
+        }
+        x
+    }
 }
 
 pub fn multiplication_normal<T>(a: &Matrix<T>, b: &Matrix<T>) -> Matrix<T>
@@ -202,9 +228,9 @@ where
 
     for i in 0..a.rows {
         vals.push(Vec::with_capacity(b.cols));
-        for j in 0..a.cols {
+        for j in 0..b.cols {
             vals[i].push(a[i][0] * b[0][j]);
-            for k in 1..b.cols {
+            for k in 1..a.cols {
                 vals[i][j] = vals[i][j] + (a[i][k] * b[k][j]);
             }
         }
@@ -233,7 +259,7 @@ fn find_greatest_dim<T>(a: &Matrix<T>, b: &Matrix<T>) -> usize {
 
 pub fn strassen_wrapper<T>(a: &mut Matrix<T>, b: &mut Matrix<T>) -> Matrix<T>
 where
-    T: Copy + Add<Output = T> + Mul<Output = T> + From<u32> + Sub<Output = T>,
+    T: Copy + Add<Output = T> + Mul<Output = T> + From<u8> + Sub<Output = T> + Eq,
 {
     if a.cols != b.rows {
         panic!("dimensions for multiplication don't match");
@@ -246,15 +272,19 @@ where
         fill_n <<= 1;
     }
 
+    let (rows, cols) = (a.rows, b.cols);
+
     a.fill_zeroes(fill_n);
     b.fill_zeroes(fill_n);
 
-    strassen(&a, &b, fill_n)
+    let mut c = strassen(&a, &b, fill_n);
+    c.trim(rows, cols);
+    c
 }
 
 pub fn strassen<T>(a: &Matrix<T>, b: &Matrix<T>, n: usize) -> Matrix<T>
 where
-    T: Copy + Sub<Output = T> + Add<Output = T> + Mul<Output = T> + From<u32>,
+    T: Copy + Sub<Output = T> + Add<Output = T> + Mul<Output = T> + From<u8> + Eq,
 {
     let c: Matrix<T>;
     if n == 1 {
