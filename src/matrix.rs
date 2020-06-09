@@ -6,6 +6,10 @@ use std::fmt::{Debug, Display};
 /* for binary ops of Matrix */
 use std::ops::{Add, Index, IndexMut, Mul, Sub};
 
+/* for multithread/ concurrency */
+use std::sync::{Arc, Mutex};
+use std::thread::{self, JoinHandle};
+
 // Struct for matrices
 #[derive(Debug)]
 pub struct Matrix<T> {
@@ -251,6 +255,55 @@ where
         rows: a.rows,
         cols: b.cols,
         vals,
+    }
+}
+
+pub fn multiplication_concurrency<T>(a: &Matrix<T>, b: &Matrix<T>) -> Matrix<T>
+where
+    T: Copy + Add<Output = T> + Mul<Output = T> + Send + Sync + From<u8> + 'static,
+{
+    if a.cols != b.rows {
+        panic!("dimensions for multiplication don't match");
+    }
+
+    let vals = Arc::new(Mutex::new(Vec::with_capacity(a.rows)));
+    let mut vec: Vec<JoinHandle<()>> = vec![];
+
+    for i in 0..a.rows {
+        let temp_vals = Arc::clone(&vals);
+        let mut temp_vals = temp_vals.lock().unwrap();
+        temp_vals.push(Vec::with_capacity(b.cols));
+        drop(temp_vals);
+        for j in 0..b.cols {
+            let temp_vals = Arc::clone(&vals);
+            let mut temp_vals = temp_vals.lock().unwrap();
+            temp_vals[i].push(a[i][0] * b[0][j]);
+            drop(temp_vals);
+
+            let temp_a = a.vals[i].clone();
+            let temp_b = b.get_vec_part(0, b.rows, j, j + 1);
+            let cols = a.cols;
+            let temp_i = i;
+            let temp_vals = Arc::clone(&vals);
+            vec.push(thread::spawn(move || {
+                for k in 1..cols {
+                    let mut temp_vals = temp_vals.lock().unwrap();
+                    (*temp_vals)[temp_i][j] = temp_vals[temp_i][j] + temp_a[k] * temp_b[k][0];
+                }
+            }));
+        }
+    }
+
+    for i in vec {
+        i.join().unwrap();
+    }
+
+    let temp_vals = Arc::clone(&vals);
+    let temp_vals = temp_vals.lock().unwrap();
+    Matrix::<T> {
+        rows: a.rows,
+        cols: b.cols,
+        vals: temp_vals.to_vec(),
     }
 }
 
