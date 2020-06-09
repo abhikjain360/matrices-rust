@@ -119,7 +119,13 @@ where
     type Output = Matrix<T>;
 
     fn mul(mut self, mut other: Matrix<T>) -> Matrix<T> {
-        strassen_wrapper(&mut self, &mut other)
+        let x: Matrix<T>;
+        if self.rows > 700 && self.cols > 700 {
+            x = multiplication_normal(&self, &other);
+        } else {
+            x = strassen_wrapper(&mut self, &mut other);
+        }
+        x
     }
 }
 
