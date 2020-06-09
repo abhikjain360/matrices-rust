@@ -5,4 +5,4 @@ Allows to implement any user-defined structs as well primitve types into 2d-matr
 TODO:
 + More optimized file i/o
 + Better way to copy/split the matrix
-+ Do matrix multiplication using concurrency
++ Do matrix multiplication using ~~std::threads~~ [rayon](https://github.com/rayon-rs/rayon)
