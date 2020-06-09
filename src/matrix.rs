@@ -114,7 +114,7 @@ where
 /* multiplication of matrices */
 impl<T> Mul<Matrix<T>> for Matrix<T>
 where
-    T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<u8> + Eq,
+    T: Copy + Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<u8>,
 {
     type Output = Matrix<T>;
 
@@ -143,7 +143,7 @@ where
 /* method needed for strassen */
 impl<T> Matrix<T>
 where
-    T: Clone + From<u8> + Copy + Eq,
+    T: Clone + From<u8> + Copy,
 {
     pub fn fill_zeroes(&mut self, n: usize) {
         if n < self.cols || n < self.rows {
@@ -199,7 +199,12 @@ where
         self.cols = cols;
         self.vals = self.get_vec_part(0, rows, 0, cols);
     }
+}
 
+impl<T> Matrix<T>
+where
+    T: Eq,
+{
     pub fn isequal(&self, other: &Matrix<T>) -> bool {
         let mut x: bool = true;
         if self.rows != other.rows || self.cols != other.cols {
@@ -259,7 +264,7 @@ fn find_greatest_dim<T>(a: &Matrix<T>, b: &Matrix<T>) -> usize {
 
 pub fn strassen_wrapper<T>(a: &mut Matrix<T>, b: &mut Matrix<T>) -> Matrix<T>
 where
-    T: Copy + Add<Output = T> + Mul<Output = T> + From<u8> + Sub<Output = T> + Eq,
+    T: Copy + Add<Output = T> + Mul<Output = T> + From<u8> + Sub<Output = T>,
 {
     if a.cols != b.rows {
         panic!("dimensions for multiplication don't match");
@@ -284,7 +289,7 @@ where
 
 pub fn strassen<T>(a: &Matrix<T>, b: &Matrix<T>, n: usize) -> Matrix<T>
 where
-    T: Copy + Sub<Output = T> + Add<Output = T> + Mul<Output = T> + From<u8> + Eq,
+    T: Copy + Sub<Output = T> + Add<Output = T> + Mul<Output = T> + From<u8>,
 {
     let c: Matrix<T>;
     if n == 1 {
