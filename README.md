@@ -4,4 +4,4 @@ Allows to implement any user-defined structs as well primitve types into 2d-matr
 
 TODO:  
 + More optimized file i/o  
-+ Better way to copy/split the matrix  
++ Better way to copy/split the matrix
