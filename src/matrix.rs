@@ -61,7 +61,7 @@ impl<T> IndexMut<usize> for Matrix<T> {
 /* addition of matrices */
 impl<T> Add<Matrix<T>> for Matrix<T>
 where
-    T: Copy + Add<Output = T> + Mul<Output = T>,
+    T: Copy + Add<Output = T>,
 {
     type Output = Matrix<T>;
 
@@ -90,7 +90,7 @@ where
 /* subtraction of matrices */
 impl<T> Sub<Matrix<T>> for Matrix<T>
 where
-    T: Copy + Sub<Output = T> + Mul<Output = T>,
+    T: Copy + Sub<Output = T>,
 {
     type Output = Matrix<T>;
 
@@ -175,7 +175,12 @@ where
         self.rows = n;
         self.cols = n;
     }
+}
 
+impl<T> Matrix<T>
+where
+    T: Copy,
+{
     pub fn quad(&self, n: usize) -> Matrix<T> {
         if self.cols % 2 == 1 || self.rows % 2 == 1 {
             panic!("dimensions mismatch for quadrant division");
@@ -323,7 +328,7 @@ fn find_greatest_dim<T>(a: &Matrix<T>, b: &Matrix<T>) -> usize {
 
 pub fn strassen_wrapper<T>(a: &mut Matrix<T>, b: &mut Matrix<T>) -> Matrix<T>
 where
-    T: Copy + Add<Output = T> + Mul<Output = T> + From<u8> + Sub<Output = T>,
+    T: Copy + Sub<Output = T> + Add<Output = T> + Mul<Output = T> + From<u8>,
 {
     if a.cols != b.rows {
         panic!("dimensions for multiplication don't match");
@@ -358,13 +363,13 @@ where
             vals: vec![vec![a[0][0] * b[0][0]]],
         };
     } else {
-        let p1: Matrix<T> = a.quad(1) * (b.quad(2) - b.quad(4));
-        let p2: Matrix<T> = (a.quad(1) + a.quad(2)) * b.quad(4);
-        let p3: Matrix<T> = (a.quad(3) + a.quad(4)) * b.quad(1);
-        let p4: Matrix<T> = a.quad(4) * (b.quad(3) - b.quad(1));
-        let p5: Matrix<T> = (a.quad(1) + a.quad(4)) * (b.quad(1) + b.quad(4));
-        let p6: Matrix<T> = (a.quad(2) - a.quad(4)) * (b.quad(3) + b.quad(4));
-        let p7: Matrix<T> = (a.quad(1) - a.quad(3)) * (b.quad(1) + b.quad(2));
+        let p1 = a.quad(1) * (b.quad(2) - b.quad(4));
+        let p2 = (a.quad(1) + a.quad(2)) * b.quad(4);
+        let p3 = (a.quad(3) + a.quad(4)) * b.quad(1);
+        let p4 = a.quad(4) * (b.quad(3) - b.quad(1));
+        let p5 = (a.quad(1) + a.quad(4)) * (b.quad(1) + b.quad(4));
+        let p6 = (a.quad(2) - a.quad(4)) * (b.quad(3) + b.quad(4));
+        let p7 = (a.quad(1) - a.quad(3)) * (b.quad(1) + b.quad(2));
 
         c = combine_quad(
             &(p5.clone() + p4.clone() - p2.clone() + p6),
